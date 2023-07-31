@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include "json.h"
 
@@ -74,10 +73,10 @@ static bool isDigit(char c) {
 }
 
 static void skipWs() {
-    while(*lexer.current != '\0' && 
-    (*lexer.current == ' ' || 
-     *lexer.current == '\r' || 
-     *lexer.current == '\n' || 
+    while(*lexer.current != '\0' &&
+    (*lexer.current == ' ' ||
+     *lexer.current == '\r' ||
+     *lexer.current == '\n' ||
      *lexer.current == '\t') ) lexer.current++;
 }
 
@@ -111,7 +110,7 @@ static Token *string() {
             lexer.current++;
             break;
         }
-        lexer.current++; 
+        lexer.current++;
     }
     return createToken(STRING);
 }
@@ -203,7 +202,7 @@ static void array() {
 static void value() {
     switch (parser.current->type)
     {
-        case TRUE:     
+        case TRUE:
             valuePtr = &trueValue;
             break;
         case FALSE:
@@ -222,8 +221,8 @@ static void value() {
         }
         case STRING: {
             ObjectString string = {
-                .length = parser.current->length,
                 .type = OBJ_STRING,
+                .length = parser.current->length,
                 .value = parser.current->value
             };
             Value value = {
@@ -270,8 +269,6 @@ static void members() {
 static ObjectJson *object() {
 
     Member member = {
-        .key = NULL,
-        .value = NULL,
         .next = NULL
     };
     currentMember = &member;
@@ -284,7 +281,7 @@ static ObjectJson *object() {
     expect(LBRACE, "Expect '{' at the beginning.");
     if(!match(RBRACE)) members();
     expect(RBRACE, "Expect '}' after members.");
-    
+
     return &json;
 }
 

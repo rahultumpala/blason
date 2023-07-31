@@ -1,6 +1,8 @@
 #ifndef blason
 #define blason
 
+#include <stdbool.h>
+
 typedef enum {
     LBRACE,
     RBRACE,
@@ -51,8 +53,8 @@ typedef struct {
     char *value;
 } ObjectString;
 
-struct Member;
-struct Value;
+typedef struct Member Member;
+typedef struct Value Value;
 
 typedef struct {
     ObjectType type;
@@ -85,9 +87,6 @@ struct Member {
     Value value;
     struct Member *next;
 };
-
-typedef struct Member Member;
-typedef struct Value Value;
 
 ObjectJson parseJSON(char *path);
 
