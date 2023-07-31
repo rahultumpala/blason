@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "json.h"
 
 Lexer lexer = {
@@ -10,8 +11,30 @@ Lexer lexer = {
 
 Parser parser = {
     .previous = NULL,
-    .current = NULL
+    .current = NULL,
 };
+
+Value trueValue = {
+    .type = VAL_BOOL,
+    .next = NULL,
+};
+
+Value falseValue = {
+    .type = VAL_BOOL,
+    .next = NULL,
+};
+
+Value nullValue = {
+    .type = VAL_NIL,
+    .next = NULL,
+};
+
+Value tempVal = {
+    .next = NULL,
+};
+
+Member *currentMember, *previousMember;
+Value *valuePtr = &tempVal;
 
 static char *readFile(const char *path){
     FILE *file;
@@ -58,21 +81,21 @@ static void skipWs() {
      *lexer.current == '\t') ) lexer.current++;
 }
 
-static Token createToken(TokenType type) {
+static Token *createToken(TokenType type) {
     Token token = {
         .type = type,
         .length = (int) (lexer.current - lexer.start),
         .value = lexer.start
     };
     lexer.start = lexer.current;
-    return token;
+    return &token;
 }
 
 static bool end(){
     return *lexer.current == '\0';
 }
 
-static Token literal() {
+static Token *literal() {
     while(isAlpha(*lexer.current)) lexer.current++;
     int len = (int)(lexer.current - lexer.start);
     if(strncmp("true", lexer.start, len) == 0) return createToken(TRUE);
@@ -82,7 +105,7 @@ static Token literal() {
     exit(74);
 }
 
-static Token string() {
+static Token *string() {
     while(!end()){
         if(*lexer.current == '"' && lexer.current[-1] != '\\') {
             lexer.current++;
@@ -93,7 +116,7 @@ static Token string() {
     return createToken(STRING);
 }
 
-static Token number() {
+static Token *number() {
     while(!end()) {
         char c = *lexer.current;
         if(isDigit(c) || c == '.' || c == 'e' || c == 'E') lexer.current ++;
@@ -103,7 +126,7 @@ static Token number() {
     return createToken(NUMBER);
 }
 
-Token scanToken() {
+static Token *scanToken() {
     skipWs();
     lexer.start = lexer.current;
 
@@ -123,12 +146,12 @@ Token scanToken() {
         case ',' : return createToken(COMMA);
         case '"' : return string();
         default:
-            fprintf(stderr, "Unknown character '%s'.\n", c);
+            fprintf(stderr, "Unknown character '%c'.\n", c);
             exit(74);
     }
 }
 
-void lex(char *path) {
+static void lex(char *path) {
     lexer.start  = readFile(path);
     lexer.current = lexer.start;
 }
@@ -139,7 +162,7 @@ static void advance(){
 }
 
 static bool check(TokenType type) {
-    return parser.current.type == type;
+    return parser.current->type == type;
 }
 
 static bool match(TokenType type) {
@@ -149,19 +172,26 @@ static bool match(TokenType type) {
 }
 
 static void expect(TokenType type, char *message) {
-    if(parser.current.type != type) {
+    if(parser.current->type != type) {
         fprintf(stderr, message);
         exit(74);
     }
     advance();
 }
 
-static void object();
+static ObjectJson *object();
 static void value();
 
 static void elements() {
+    Value newVal = {
+        .next = valuePtr,
+    };
+    Value *cur = valuePtr;
+    valuePtr = &newVal;
     value();
-    while(match(COMMA)) value();
+    cur->next = valuePtr;
+    valuePtr = cur;
+    while(match(COMMA)) elements();
 }
 
 static void array() {
@@ -171,28 +201,94 @@ static void array() {
 }
 
 static void value() {
-    if(check(TRUE) || check(FALSE) || check(NIL) || check(NUMBER) || check(STRING)) return;
-    else if(check(LBRACE)) object();
-    else if(check(LSQUARE)) array();
+    switch (parser.current->type)
+    {
+        case TRUE:     
+            valuePtr = &trueValue;
+            break;
+        case FALSE:
+            valuePtr = &falseValue;
+            break;
+        case NIL:
+            valuePtr = &nullValue;
+            break;
+        case NUMBER: {
+            Value numberValue = {
+                .type = VAL_NUMBER,
+                .as = strtod(parser.current->value, NULL),
+            };
+            valuePtr = &numberValue;
+            break;
+        }
+        case STRING: {
+            ObjectString string = {
+                .length = parser.current->length,
+                .type = OBJ_STRING,
+                .value = parser.current->value
+            };
+            Value value = {
+                .type = VAL_OBJ,
+                .as = &string,
+            };
+            valuePtr = &value;
+        }
+        case LBRACE: {
+            Member *ptr = currentMember;
+            Value value = {
+                .type = VAL_OBJ,
+                .as = object()
+            };
+            currentMember = ptr;
+            valuePtr = &value;
+        }
+        case LSQUARE: {
+
+        }
+    }
 }
 
 static void pair() {
     expect(STRING, "Expect string as key in a pair.");
+    currentMember->key = *parser.previous;
     expect(COLON, "Expect ':' between key and value in a pair.");
     value();
+    currentMember->value = *valuePtr;
 }
 
 static void members() {
+    previousMember = currentMember;
+    Member newVal = {
+        .next = NULL
+    };
+    currentMember = &newVal;
     pair();
-    while(match(COMMA)) pair();
+    previousMember->next = currentMember;
+    currentMember = previousMember;
+    while(match(COMMA)) members();
 }
 
-static void object() {
+static ObjectJson *object() {
+
+    Member member = {
+        .key = NULL,
+        .value = NULL,
+        .next = NULL
+    };
+    currentMember = &member;
+
+    ObjectJson json = {
+        .type = OBJ_JSON,
+        .members = &member,
+    };
+
     expect(LBRACE, "Expect '{' at the beginning.");
     if(!match(RBRACE)) members();
     expect(RBRACE, "Expect '}' after members.");
+    
+    return &json;
 }
 
-void parse() {
-    object();
+ObjectJson parseJSON(char *path) {
+    lex(path);
+    return *object();
 }

@@ -28,14 +28,15 @@ typedef struct {
 } Lexer;
 
 typedef struct {
-    Token previous;
-    Token current;
+    Token *previous;
+    Token *current;
 } Parser;
 
 typedef enum {
     VAL_BOOL,
     VAL_NIL,
-    VAL_NUMBER
+    VAL_NUMBER,
+    VAL_OBJ,
 } ValueType;
 
 typedef enum {
@@ -49,6 +50,9 @@ typedef struct {
     int length;
     char *value;
 } ObjectString;
+
+struct Member;
+struct Value;
 
 typedef struct {
     ObjectType type;
@@ -66,27 +70,25 @@ typedef struct {
 } Object;
 
 // tagged union
-typedef struct {
+struct Value {
     ValueType type;
     union {
         bool boolean;
         double number;
         Object *obj;
     } as;
-} Value;
+    struct Value *next;
+};
 
-typedef struct {
+struct Member {
     Token key;
     Value value;
-    Member *next;
-} Member;
+    struct Member *next;
+};
 
-typedef struct {
-    Member *start;
-} JSON;
+typedef struct Member Member;
+typedef struct Value Value;
 
-char *readFile(const char *path);
-void lex(char *path);
-void parse();
+ObjectJson parseJSON(char *path);
 
 #endif
