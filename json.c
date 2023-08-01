@@ -37,6 +37,7 @@ Value *valuePtr = &tempVal;
 
 static char *readFile(const char *path){
     FILE *file;
+    file = fopen(path, "rb");
     if(file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
         exit(74);
