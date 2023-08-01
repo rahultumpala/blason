@@ -90,4 +90,6 @@ struct Member {
 
 ObjectJson parseJSON(char *path);
 
+#define DEBUG_ERRORS
+
 #endif

@@ -82,13 +82,12 @@ static void skipWs() {
 }
 
 static Token *createToken(TokenType type) {
-    Token token = {
-        .type = type,
-        .length = (int) (lexer.current - lexer.start),
-        .value = lexer.start
-    };
+    Token *token = (Token *) malloc(sizeof(Token));
+    token->type = type,
+    token->length = (int) (lexer.current - lexer.start),
+    token->value = lexer.start;
     lexer.start = lexer.current;
-    return &token;
+    return token;
 }
 
 static bool end(){
@@ -173,7 +172,14 @@ static bool match(TokenType type) {
 
 static void expect(TokenType type, char *message) {
     if(parser.current->type != type) {
-        fprintf(stderr, message);
+        #ifdef DEBUG_ERRORS
+            printf("previous type: %d, previous length: %d, previous value : %.*s\n",parser.previous->type, parser.previous->length, parser.previous->length, parser.previous->value);
+            printf("Current length: %d, Current value : %.*s\n",parser.current->length, parser.current->length, parser.current->value);
+            printf("current type  : %d, expected type : %d\n",parser.current->type, type);
+            advance();
+            printf("Next length: %d, Next value : %.*s\n",parser.current->length, parser.current->length, parser.current->value);
+        #endif
+        fprintf(stderr, "%s\n", message);
         exit(74);
     }
     advance();
@@ -183,11 +189,10 @@ static ObjectJson *object();
 static void value();
 
 static void elements() {
-    Value newVal = {
-        .next = valuePtr,
-    };
+    Value *newVal = (Value *)malloc(sizeof(Value));
+    newVal->next = valuePtr;
     Value *cur = valuePtr;
-    valuePtr = &newVal;
+    valuePtr = newVal;
     value();
     cur->next = valuePtr;
     valuePtr = cur;
@@ -205,45 +210,65 @@ static void value() {
     {
         case TRUE:
             valuePtr = &trueValue;
+            advance();
             break;
         case FALSE:
             valuePtr = &falseValue;
+            advance();
             break;
         case NIL:
             valuePtr = &nullValue;
+            advance();
             break;
         case NUMBER: {
-            Value numberValue = {
-                .type = VAL_NUMBER,
-                .as = strtod(parser.current->value, NULL),
-            };
-            valuePtr = &numberValue;
+            Value *numberValue = (Value *)malloc(sizeof(Value));
+            numberValue->type = VAL_NUMBER;
+            numberValue->as.number = (double) strtod(parser.current->value, NULL);
+            valuePtr = numberValue;
+            advance();
             break;
         }
         case STRING: {
-            ObjectString string = {
-                .type = OBJ_STRING,
-                .length = parser.current->length,
-                .value = parser.current->value
-            };
-            Value value = {
-                .type = VAL_OBJ,
-                .as = &string,
-            };
-            valuePtr = &value;
+            ObjectString *string = (ObjectString *)malloc(sizeof(ObjectString));
+            string->type = OBJ_STRING;
+            string->length = parser.current->length;
+            string->value = parser.current->value;
+
+            Value *value = (Value *)malloc(sizeof(Value));
+            value->type = VAL_OBJ;
+            value->as.obj = (Object *) string;
+
+            valuePtr = value;
+            advance();
+            break;
         }
         case LBRACE: {
             Member *ptr = currentMember;
-            Value value = {
-                .type = VAL_OBJ,
-                .as = object()
-            };
+            Value *value = (Value *)malloc(sizeof(Value));
+            value->type = VAL_OBJ;
+            value->as.obj = (Object *) object();
+            
             currentMember = ptr;
-            valuePtr = &value;
+            valuePtr = value;
+            break;
         }
         case LSQUARE: {
+            ObjectArray *arrayObj = (ObjectArray *)malloc(sizeof(ObjectArray));
+            arrayObj->type = OBJ_ARRAY;
+            arrayObj->start = valuePtr;
 
+            array();
+            
+            Value *value = (Value *)malloc(sizeof(Value));
+            value->type = VAL_OBJ;
+            value->as.obj = (Object *) arrayObj;
+
+            valuePtr = value;
+            break;
         }
+        default:
+            fprintf(stderr, "%s", "Unsupported value type.");
+            exit(74);
     }
 }
 
@@ -257,36 +282,40 @@ static void pair() {
 
 static void members() {
     previousMember = currentMember;
-    Member newVal = {
-        .next = NULL
-    };
-    currentMember = &newVal;
+    Member *newVal = (Member *)malloc(sizeof(Member));
+    newVal->next = NULL;
+    currentMember = newVal;
     pair();
     previousMember->next = currentMember;
     currentMember = previousMember;
-    while(match(COMMA)) members();
+    while(match(COMMA)){
+        members();
+    } 
 }
 
 static ObjectJson *object() {
 
-    Member member = {
-        .next = NULL
-    };
-    currentMember = &member;
+    Member *member = (Member *)malloc(sizeof(Member));
+    member->next = NULL;
 
-    ObjectJson json = {
-        .type = OBJ_JSON,
-        .members = &member,
-    };
+    previousMember = currentMember;
+    currentMember = member;
+
+    ObjectJson *json = (ObjectJson *) malloc(sizeof(ObjectJson));
+    json->type = OBJ_JSON;
+    json->members = member;
 
     expect(LBRACE, "Expect '{' at the beginning.");
-    if(!match(RBRACE)) members();
+    if(!check(RBRACE)) members();
     expect(RBRACE, "Expect '}' after members.");
 
-    return &json;
+    currentMember = previousMember;
+    return json;
 }
 
 ObjectJson parseJSON(char *path) {
     lex(path);
+    // to set the first token in parser.current
+    advance();
     return *object();
 }
