@@ -34,5 +34,10 @@
                 "answer": "4"
             }
         }
-    }
+    },
+    "testEmpty" : [],
+    "testBool" : true,
+    "testNum" : 1234,
+    "testNull" : null,
+    "emptyObj" : {}
 }

@@ -1,13 +1,12 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "json.h"
 #include "print.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 Lexer lexer = {
     .start = NULL,
-    .current = NULL
-};
+    .current = NULL};
 
 Parser parser = {
     .previous = NULL,
@@ -31,10 +30,10 @@ Value nullValue = {
     .next = NULL,
 };
 
-static char *readFile(const char *path){
+static char *readFile(const char *path) {
     FILE *file;
     file = fopen(path, "rb");
-    if(file == NULL) {
+    if (file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
         exit(74);
     }
@@ -43,14 +42,14 @@ static char *readFile(const char *path){
     size_t fileSize = ftell(file);
     rewind(file);
 
-    char *buffer = (char*)malloc(fileSize+1);
-    if(buffer == NULL) {
+    char *buffer = (char *)malloc(fileSize + 1);
+    if (buffer == NULL) {
         fprintf(stderr, "Could not allocate enough memory to read \"%s\".\n", path);
         exit(74);
     }
 
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-    if(bytesRead < fileSize) {
+    if (bytesRead < fileSize) {
         fprintf(stderr, "Could not read file \"%s\".\n", path);
         exit(74);
     }
@@ -70,40 +69,45 @@ static bool isDigit(char c) {
 }
 
 static void skipWs() {
-    while(*lexer.current != '\0' &&
-    (*lexer.current == ' ' ||
-     *lexer.current == '\r' ||
-     *lexer.current == '\n' ||
-     *lexer.current == '\t') ) lexer.current++;
+    while (*lexer.current != '\0' &&
+           (*lexer.current == ' ' ||
+            *lexer.current == '\r' ||
+            *lexer.current == '\n' ||
+            *lexer.current == '\t'))
+        lexer.current++;
 }
 
 static Token *createToken(TokenType type) {
-    Token *token = (Token *) malloc(sizeof(Token));
+    Token *token = (Token *)malloc(sizeof(Token));
     token->type = type,
-    token->length = (int) (lexer.current - lexer.start),
+    token->length = (int)(lexer.current - lexer.start),
     token->value = lexer.start;
     lexer.start = lexer.current;
     // printf("creating Token: type= %d, length= %d value= %.*s\n", token->type, token->length, token->length, token->value);
     return token;
 }
 
-static bool end(){
+static bool end() {
     return *lexer.current == '\0';
 }
 
 static Token *literal() {
-    while(isAlpha(*lexer.current)) lexer.current++;
+    while (isAlpha(*lexer.current))
+        lexer.current++;
     int len = (int)(lexer.current - lexer.start);
-    if(strncmp("true", lexer.start, len) == 0) return createToken(TRUE);
-    if(strncmp("false", lexer.start, len) == 0) return createToken(FALSE);
-    if(strncmp("null", lexer.start, len) == 0) return createToken(NIL);
+    if (strncmp("true", lexer.start, len) == 0)
+        return createToken(TRUE);
+    if (strncmp("false", lexer.start, len) == 0)
+        return createToken(FALSE);
+    if (strncmp("null", lexer.start, len) == 0)
+        return createToken(NIL);
     fprintf(stderr, "Unknown literal '%.*s'.\n", len, lexer.start);
     exit(74);
 }
 
 static Token *string() {
-    while(!end()){
-        if(*lexer.current == '"' && lexer.current[-1] != '\\') {
+    while (!end()) {
+        if (*lexer.current == '"' && lexer.current[-1] != '\\') {
             lexer.current++;
             break;
         }
@@ -113,10 +117,12 @@ static Token *string() {
 }
 
 static Token *number() {
-    while(!end()) {
+    while (!end()) {
         char c = *lexer.current;
-        if(isDigit(c) || c == '.' || c == 'e' || c == 'E') lexer.current ++;
-        else break;
+        if (isDigit(c) || c == '.' || c == 'e' || c == 'E')
+            lexer.current++;
+        else
+            break;
     }
     // TODO: check if number is valid and conforming to the grammar
     return createToken(NUMBER);
@@ -126,33 +132,42 @@ static Token *scanToken() {
     skipWs();
     lexer.start = lexer.current;
 
-    if(end()) return createToken(TOKEN_EOF);
+    if (end())
+        return createToken(TOKEN_EOF);
     char c = *lexer.current++;
 
-    if(isAlpha(c)) return literal();
-    if(isDigit(c) || c == '-') return number();
+    if (isAlpha(c))
+        return literal();
+    if (isDigit(c) || c == '-')
+        return number();
 
-    switch (c)
-    {
-        case '{' : return createToken(LBRACE);
-        case '}' : return createToken(RBRACE);
-        case '[' : return createToken(LSQUARE);
-        case ']' : return createToken(RSQUARE);
-        case ':' : return createToken(COLON);
-        case ',' : return createToken(COMMA);
-        case '"' : return string();
-        default:
-            fprintf(stderr, "Unknown character '%c'.\n", c);
-            exit(74);
+    switch (c) {
+    case '{':
+        return createToken(LBRACE);
+    case '}':
+        return createToken(RBRACE);
+    case '[':
+        return createToken(LSQUARE);
+    case ']':
+        return createToken(RSQUARE);
+    case ':':
+        return createToken(COLON);
+    case ',':
+        return createToken(COMMA);
+    case '"':
+        return string();
+    default:
+        fprintf(stderr, "Unknown character '%c'.\n", c);
+        exit(74);
     }
 }
 
 static void lex(char *path) {
-    lexer.start  = readFile(path);
+    lexer.start = readFile(path);
     lexer.current = lexer.start;
 }
 
-static void advance(){
+static void advance() {
     parser.previous = parser.current;
     parser.current = scanToken();
 }
@@ -162,20 +177,21 @@ static bool check(TokenType type) {
 }
 
 static bool match(TokenType type) {
-    if(!check(type)) return false;
+    if (!check(type))
+        return false;
     advance();
     return true;
 }
 
 static void expect(TokenType type, char *message) {
-    if(parser.current->type != type) {
-        #ifdef DEBUG_ERRORS
-            printf("previous type: %d, previous length: %d, previous value : %.*s\n",parser.previous->type, parser.previous->length, parser.previous->length, parser.previous->value);
-            printf("Current length: %d, Current value : %.*s\n",parser.current->length, parser.current->length, parser.current->value);
-            printf("current type  : %d, expected type : %d\n",parser.current->type, type);
-            advance();
-            printf("Next length: %d, Next value : %.*s\n",parser.current->length, parser.current->length, parser.current->value);
-        #endif
+    if (parser.current->type != type) {
+#ifdef DEBUG_ERRORS
+        printf("previous type: %d, previous length: %d, previous value : %.*s\n", parser.previous->type, parser.previous->length, parser.previous->length, parser.previous->value);
+        printf("Current length: %d, Current value : %.*s\n", parser.current->length, parser.current->length, parser.current->value);
+        printf("current type  : %d, expected type : %d\n", parser.current->type, type);
+        advance();
+        printf("Next length: %d, Next value : %.*s\n", parser.current->length, parser.current->length, parser.current->value);
+#endif
         fprintf(stderr, "%s\n", message);
         exit(74);
     }
@@ -188,10 +204,12 @@ static Value *value();
 static Value *elements() {
     Value *start = value();
     Value *end = start;
-    while(match(COMMA)){
+    while (match(COMMA)) {
         end->next = value();
         end = end->next;
     }
+    if (end != NULL)
+        end->next = NULL;
     return start;
 }
 
@@ -199,68 +217,70 @@ static ObjectArray *array() {
     expect(LSQUARE, "Expect '[' at the beginning of an array.");
     ObjectArray *arrayObj = (ObjectArray *)malloc(sizeof(ObjectArray));
     arrayObj->type = OBJ_ARRAY;
-    arrayObj->start = elements();
+    if (check(RSQUARE))
+        arrayObj->start = NULL;
+    else
+        arrayObj->start = elements();
     expect(RSQUARE, "Expect '[' at the beginning of an array.");
     return arrayObj;
 }
 
 static Value *value() {
-    switch (parser.current->type)
-    {
-        case TRUE:
-            advance();
-            return &trueValue;
-            break;
-        case FALSE:
-            advance();
-            return &falseValue;
-            break;
-        case NIL:
-            advance();
-            return &nullValue;
-            break;
-        case NUMBER: {
-            Value *numberValue = (Value *)malloc(sizeof(Value));
-            numberValue->type = VAL_NUMBER;
-            numberValue->as.number = (double) strtod(parser.current->value, NULL);
-            advance();
-            return numberValue;
-            break;
-        }
-        case STRING: {
-            ObjectString *string = (ObjectString *)malloc(sizeof(ObjectString));
-            string->type = OBJ_STRING;
-            string->length = parser.current->length;
-            string->value = parser.current->value;
+    switch (parser.current->type) {
+    case TRUE:
+        advance();
+        return &trueValue;
+        break;
+    case FALSE:
+        advance();
+        return &falseValue;
+        break;
+    case NIL:
+        advance();
+        return &nullValue;
+        break;
+    case NUMBER: {
+        Value *numberValue = (Value *)malloc(sizeof(Value));
+        numberValue->type = VAL_NUMBER;
+        numberValue->as.number = (double)strtod(parser.current->value, NULL);
+        advance();
+        return numberValue;
+        break;
+    }
+    case STRING: {
+        ObjectString *string = (ObjectString *)malloc(sizeof(ObjectString));
+        string->type = OBJ_STRING;
+        string->length = parser.current->length;
+        string->value = parser.current->value;
 
-            Value *value = (Value *)malloc(sizeof(Value));
-            value->type = VAL_OBJ;
-            value->as.obj = (Object *) string;
+        Value *value = (Value *)malloc(sizeof(Value));
+        value->type = VAL_OBJ;
+        value->as.obj = (Object *)string;
 
-            advance();
-            return value;
-            break;
-        }
-        case LBRACE: {
-            Value *value = (Value *)malloc(sizeof(Value));
-            value->type = VAL_OBJ;
-            value->as.obj = (Object *) object();
-            return value;
-            break;
-        }
-        case LSQUARE: {
-            ObjectArray *arrayObj = array();
+        advance();
+        return value;
+        break;
+    }
+    case LBRACE: {
+        Value *value = (Value *)malloc(sizeof(Value));
+        value->type = VAL_OBJ;
+        value->as.obj = (Object *)object();
+        return value;
+        break;
+    }
+    case LSQUARE: {
+        ObjectArray *arrayObj = array();
 
-            Value *value = (Value *)malloc(sizeof(Value));
-            value->type = VAL_OBJ;
-            value->as.obj = (Object *) arrayObj;
+        Value *value = (Value *)malloc(sizeof(Value));
+        value->type = VAL_OBJ;
+        value->as.obj = (Object *)arrayObj;
 
-            return value;
-            break;
-        }
-        default:
-            fprintf(stderr, "%s", "Unsupported value type.");
-            exit(74);
+        return value;
+        break;
+    }
+    default:
+        fprintf(stderr, "%s", "Unsupported value type.");
+        exit(74);
     }
 }
 
@@ -275,20 +295,21 @@ static Member *members() {
     Member *member = (Member *)malloc(sizeof(Member));
     member->next = NULL;
     pair(member);
-    while(match(COMMA)){
+    while (match(COMMA)) {
         member->next = members();
     }
-    return member; 
+    return member;
 }
 
 static ObjectJson *object() {
-    ObjectJson *json = (ObjectJson *) malloc(sizeof(ObjectJson));
+    ObjectJson *json = (ObjectJson *)malloc(sizeof(ObjectJson));
     json->type = OBJ_JSON;
 
     expect(LBRACE, "Expect '{' at the beginning.");
-    if(!check(RBRACE)){
+    if (check(RBRACE))
+        json->members = NULL;
+    else
         json->members = members();
-    } 
     expect(RBRACE, "Expect '}' after members.");
 
     return json;
