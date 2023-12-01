@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "json.h"
+#include "print.h"
 
 Lexer lexer = {
     .start = NULL,
@@ -15,11 +16,13 @@ Parser parser = {
 
 Value trueValue = {
     .type = VAL_BOOL,
+    .as = true,
     .next = NULL,
 };
 
 Value falseValue = {
     .type = VAL_BOOL,
+    .as = false,
     .next = NULL,
 };
 
@@ -27,13 +30,6 @@ Value nullValue = {
     .type = VAL_NIL,
     .next = NULL,
 };
-
-Value tempVal = {
-    .next = NULL,
-};
-
-Member *currentMember, *previousMember;
-Value *valuePtr = &tempVal;
 
 static char *readFile(const char *path){
     FILE *file;
@@ -87,6 +83,7 @@ static Token *createToken(TokenType type) {
     token->length = (int) (lexer.current - lexer.start),
     token->value = lexer.start;
     lexer.start = lexer.current;
+    // printf("creating Token: type= %d, length= %d value= %.*s\n", token->type, token->length, token->length, token->value);
     return token;
 }
 
@@ -186,46 +183,48 @@ static void expect(TokenType type, char *message) {
 }
 
 static ObjectJson *object();
-static void value();
+static Value *value();
 
-static void elements() {
-    Value *newVal = (Value *)malloc(sizeof(Value));
-    newVal->next = valuePtr;
-    Value *cur = valuePtr;
-    valuePtr = newVal;
-    value();
-    cur->next = valuePtr;
-    valuePtr = cur;
-    while(match(COMMA)) elements();
+static Value *elements() {
+    Value *start = value();
+    Value *end = start;
+    while(match(COMMA)){
+        end->next = value();
+        end = end->next;
+    }
+    return start;
 }
 
-static void array() {
+static ObjectArray *array() {
     expect(LSQUARE, "Expect '[' at the beginning of an array.");
-    elements();
+    ObjectArray *arrayObj = (ObjectArray *)malloc(sizeof(ObjectArray));
+    arrayObj->type = OBJ_ARRAY;
+    arrayObj->start = elements();
     expect(RSQUARE, "Expect '[' at the beginning of an array.");
+    return arrayObj;
 }
 
-static void value() {
+static Value *value() {
     switch (parser.current->type)
     {
         case TRUE:
-            valuePtr = &trueValue;
             advance();
+            return &trueValue;
             break;
         case FALSE:
-            valuePtr = &falseValue;
             advance();
+            return &falseValue;
             break;
         case NIL:
-            valuePtr = &nullValue;
             advance();
+            return &nullValue;
             break;
         case NUMBER: {
             Value *numberValue = (Value *)malloc(sizeof(Value));
             numberValue->type = VAL_NUMBER;
             numberValue->as.number = (double) strtod(parser.current->value, NULL);
-            valuePtr = numberValue;
             advance();
+            return numberValue;
             break;
         }
         case STRING: {
@@ -238,32 +237,25 @@ static void value() {
             value->type = VAL_OBJ;
             value->as.obj = (Object *) string;
 
-            valuePtr = value;
             advance();
+            return value;
             break;
         }
         case LBRACE: {
-            Member *ptr = currentMember;
             Value *value = (Value *)malloc(sizeof(Value));
             value->type = VAL_OBJ;
             value->as.obj = (Object *) object();
-            
-            currentMember = ptr;
-            valuePtr = value;
+            return value;
             break;
         }
         case LSQUARE: {
-            ObjectArray *arrayObj = (ObjectArray *)malloc(sizeof(ObjectArray));
-            arrayObj->type = OBJ_ARRAY;
-            arrayObj->start = valuePtr;
+            ObjectArray *arrayObj = array();
 
-            array();
-            
             Value *value = (Value *)malloc(sizeof(Value));
             value->type = VAL_OBJ;
             value->as.obj = (Object *) arrayObj;
 
-            valuePtr = value;
+            return value;
             break;
         }
         default:
@@ -272,44 +264,33 @@ static void value() {
     }
 }
 
-static void pair() {
+static void pair(Member *member) {
     expect(STRING, "Expect string as key in a pair.");
-    currentMember->key = *parser.previous;
+    member->key = *parser.previous;
     expect(COLON, "Expect ':' between key and value in a pair.");
-    value();
-    currentMember->value = *valuePtr;
+    member->value = *value();
 }
 
-static void members() {
-    previousMember = currentMember;
-    Member *newVal = (Member *)malloc(sizeof(Member));
-    newVal->next = NULL;
-    currentMember = newVal;
-    pair();
-    previousMember->next = currentMember;
-    currentMember = previousMember;
+static Member *members() {
+    Member *member = (Member *)malloc(sizeof(Member));
+    member->next = NULL;
+    pair(member);
     while(match(COMMA)){
-        members();
-    } 
+        member->next = members();
+    }
+    return member; 
 }
 
 static ObjectJson *object() {
-
-    Member *member = (Member *)malloc(sizeof(Member));
-    member->next = NULL;
-
-    previousMember = currentMember;
-    currentMember = member;
-
     ObjectJson *json = (ObjectJson *) malloc(sizeof(ObjectJson));
     json->type = OBJ_JSON;
-    json->members = member;
 
     expect(LBRACE, "Expect '{' at the beginning.");
-    if(!check(RBRACE)) members();
+    if(!check(RBRACE)){
+        json->members = members();
+    } 
     expect(RBRACE, "Expect '}' after members.");
 
-    currentMember = previousMember;
     return json;
 }
 
