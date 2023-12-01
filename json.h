@@ -64,6 +64,7 @@ typedef struct {
 
 typedef struct {
     ObjectType type;
+    struct bst *htable;
     Member *members;
 } ObjectJson;
 
@@ -88,9 +89,28 @@ struct Member {
     struct Member *next;
 };
 
+typedef struct {
+    long long hash;
+    Value *value;
+    struct bst *left;
+    struct bst *right;
+} bst;
+
 ObjectJson *parseJSON(char *path);
 
+unsigned long long create_hash(char *key, int length);
+
+void create_bst(ObjectJson *json);
+
+void insert_bst(bst *root, unsigned long long hash, Value *value);
+
+void delete_bst(unsigned long long hash);
+
+bst *fetch_bst(char *key);
+
 void blason_put(ObjectJson *json);
+
+Value *blason_get(ObjectJson *json, char *key);
 
 #define DEBUG_ERRORS
 

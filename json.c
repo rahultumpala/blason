@@ -302,6 +302,9 @@ static Member *members() {
 }
 
 static ObjectJson *object() {
+    if (!check(LBRACE))
+        return NULL;
+
     ObjectJson *json = (ObjectJson *)malloc(sizeof(ObjectJson));
     json->type = OBJ_JSON;
 
@@ -320,4 +323,83 @@ ObjectJson *parseJSON(char *path) {
     // to set the first token in parser.current
     advance();
     return object();
+}
+
+unsigned long long create_hash(char *key, int length) {
+    unsigned long long p = 31;
+    unsigned long long hash = 0;
+    for (int i = 0; i < length; i++) {
+        // if long then let overflow, it is equivalent to using a 2^64 module
+        hash += p * (key[i] - 'a' + 1);
+        p *= p;
+    }
+    return hash;
+}
+
+static bst *__create_node() {
+    bst *ROOT = (bst *)malloc(sizeof(bst));
+    ROOT->value = NULL;
+    ROOT->left = NULL;
+    ROOT->right = NULL;
+    ROOT->hash = NULL;
+    return ROOT;
+}
+
+void insert_bst(bst *root, unsigned long long hash, Value *val) {
+    if (root->val == NULL) {
+        root->hash = hash;
+        root->value = val;
+        return;
+    }
+    if (root->hash > hash) {
+        if (root->left == NULL)
+            root->left = __create_node();
+        insert_bst(root->left, hash, val);
+    } else if (root->hash < hash) {
+        if (root->right == NULL)
+            root->right = __create_node();
+        insert_bst(root->right, hash, val);
+    }
+}
+
+void create_bst(ObjectJson *json) {
+    if (json->htable != NULL)
+        return;
+    bst *ROOT = __create_node();
+    Member *cur = json->members;
+    while (cur != NULL) {
+        unsigned long long hash = create_hash(cur->key.value, cur->key.length);
+        insert_bst(ROOT, hash, cur->value);
+        if (cur->value.type == VAL_OBJ) {
+            Object *obj = (Object *)cur->value.as.obj;
+            if (obj->type == OBJ_JSON)
+                create_bst((ObjectJson *)obj);
+        }
+        cur = cur->next;
+    }
+    // todo: rebalance before assigning
+    json->htable = ROOT;
+}
+
+bst *fetch_bst(bst *root, unsigned long long hash) {
+    if (root == NULL)
+        return NULL;
+    if (root->hash == hash)
+        return root;
+    if (root->hash > hash)
+        return fetch_bst(root->left, hash);
+    return fetch_bst(root->right, hash);
+}
+
+Value *blason_get(ObjectJson *json, char *key) {
+    if (json == NULL)
+        return NULL;
+    if (json->htable == NULL || key == NULL)
+        return NULL;
+    int len = strlen(key);
+    unsigned long long hash = create_hash(key, len);
+    bst *node = fetch_bst(json->htable, hash);
+    if (!node)
+        return NULL;
+    return node->value;
 }
