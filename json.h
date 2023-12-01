@@ -88,7 +88,9 @@ struct Member {
     struct Member *next;
 };
 
-ObjectJson parseJSON(char *path);
+ObjectJson *parseJSON(char *path);
+
+void blason_put(ObjectJson *json);
 
 #define DEBUG_ERRORS
 

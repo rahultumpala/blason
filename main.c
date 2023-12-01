@@ -4,7 +4,7 @@
 #include "print.h"
 
 int main(int argc, const char *argv[]) {
-    ObjectJson json = parseJSON("./test.json");
+    ObjectJson *json = parseJSON("./test.json");
     print_json(json);
     return 0;
 }

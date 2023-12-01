@@ -315,9 +315,9 @@ static ObjectJson *object() {
     return json;
 }
 
-ObjectJson parseJSON(char *path) {
+ObjectJson *parseJSON(char *path) {
     lex(path);
     // to set the first token in parser.current
     advance();
-    return *object();
+    return object();
 }

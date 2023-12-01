@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void __print_json(ObjectJson json, int depth);
+void __print_json(ObjectJson *json, int depth);
 void print_value(Value value, int depth);
 
 int width = 4;
@@ -21,7 +21,7 @@ void print_obj(Object *obj, int depth) {
     }
     case OBJ_JSON: {
         ObjectJson *json = (ObjectJson *)obj;
-        __print_json(*json, depth + 1);
+        __print_json(json, depth + 1);
         break;
     }
     case OBJ_ARRAY: {
@@ -82,25 +82,25 @@ void print_member(Member *member, int depth) {
     }
 }
 
-void __print_json(ObjectJson json, int depth) {
-    if (!__print_min && json.members != NULL)
+void __print_json(ObjectJson *json, int depth) {
+    if (!__print_min && json->members != NULL)
         printf("{\n");
     else
         printf("{");
-    if (json.members != NULL)
-        print_member(json.members, depth);
+    if (json->members != NULL)
+        print_member(json->members, depth);
 
-    if (!__print_min && json.members != NULL)
+    if (!__print_min && json->members != NULL)
         printf("\n%*c}", depth * width, ' ');
     else
         printf("}");
 }
 
-void print_json(ObjectJson json) {
+void print_json(ObjectJson *json) {
     __print_json(json, 0);
 }
 
-void print_json_min(ObjectJson json) {
+void print_json_min(ObjectJson *json) {
     __print_min = true;
     __print_json(json, 0);
     __print_min = false;

@@ -16,10 +16,10 @@ void print_value(Value value, int depth);
 
 void print_member(Member *member, int depth);
 
-void __print_json(ObjectJson json, int width);
+void __print_json(ObjectJson *json, int width);
 
-void print_json(ObjectJson json);
+void print_json(ObjectJson *json);
 
-void print_json_min(ObjectJson json);
+void print_json_min(ObjectJson *json);
 
 #endif // blason_print
