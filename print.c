@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void __print_json(ObjectJson *json, int depth);
-void print_value(Value value, int depth);
+void print_value(Value *value, int depth);
 
 int width = 4;
 bool __print_min = false;
@@ -29,7 +29,7 @@ void print_obj(Object *obj, int depth) {
         printf("[");
         Value *t = array->start;
         while (t != NULL) {
-            print_value(*t, depth);
+            print_value(t, depth);
             if (t->next == NULL) {
                 break;
             }
@@ -45,24 +45,24 @@ void print_obj(Object *obj, int depth) {
     }
 }
 
-void print_value(Value value, int depth) {
-    switch (value.type) {
+void print_value(Value *value, int depth) {
+    switch (value->type) {
     case VAL_BOOL:
-        printf("%s", value.as.boolean ? "true" : "false");
+        printf("%s", value->as.boolean ? "true" : "false");
         break;
     case VAL_NIL:
         printf("null");
         break;
     case VAL_NUMBER: {
-        long long n = (long long)value.as.number;
-        if ((double)value.as.number - n == 0)
+        long long n = (long long)value->as.number;
+        if ((double)value->as.number - n == 0)
             printf("%lld", n);
         else
-            printf("%.10f", value.as.number);
+            printf("%.10f", value->as.number);
         break;
     }
     case VAL_OBJ:
-        print_obj(value.as.obj, depth);
+        print_obj(value->as.obj, depth);
         break;
     }
 }

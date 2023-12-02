@@ -85,16 +85,18 @@ struct Value {
 
 struct Member {
     Token key;
-    Value value;
+    Value *value;
     struct Member *next;
 };
 
-typedef struct {
+typedef struct bst bst;
+
+struct bst {
     long long hash;
     Value *value;
-    struct bst *left;
-    struct bst *right;
-} bst;
+    bst *left;
+    bst *right;
+};
 
 ObjectJson *parseJSON(char *path);
 
@@ -106,7 +108,7 @@ void insert_bst(bst *root, unsigned long long hash, Value *value);
 
 void delete_bst(unsigned long long hash);
 
-bst *fetch_bst(char *key);
+bst *fetch_bst(bst *root, unsigned long long hash);
 
 void blason_put(ObjectJson *json);
 

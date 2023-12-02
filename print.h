@@ -12,7 +12,7 @@ void print_json_token(Token token);
 
 void print_obj(Object *obj, int depth);
 
-void print_value(Value value, int depth);
+void print_value(Value *value, int depth);
 
 void print_member(Member *member, int depth);
 

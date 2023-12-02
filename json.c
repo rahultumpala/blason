@@ -288,7 +288,7 @@ static void pair(Member *member) {
     expect(STRING, "Expect string as key in a pair.");
     member->key = *parser.previous;
     expect(COLON, "Expect ':' between key and value in a pair.");
-    member->value = *value();
+    member->value = value();
 }
 
 static Member *members() {
@@ -341,12 +341,12 @@ static bst *__create_node() {
     ROOT->value = NULL;
     ROOT->left = NULL;
     ROOT->right = NULL;
-    ROOT->hash = NULL;
+    ROOT->hash = 0;
     return ROOT;
 }
 
 void insert_bst(bst *root, unsigned long long hash, Value *val) {
-    if (root->val == NULL) {
+    if (root->value == NULL) {
         root->hash = hash;
         root->value = val;
         return;
@@ -370,8 +370,8 @@ void create_bst(ObjectJson *json) {
     while (cur != NULL) {
         unsigned long long hash = create_hash(cur->key.value, cur->key.length);
         insert_bst(ROOT, hash, cur->value);
-        if (cur->value.type == VAL_OBJ) {
-            Object *obj = (Object *)cur->value.as.obj;
+        if (cur->value->type == VAL_OBJ) {
+            Object *obj = (Object *)cur->value->as.obj;
             if (obj->type == OBJ_JSON)
                 create_bst((ObjectJson *)obj);
         }
