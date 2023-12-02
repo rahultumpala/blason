@@ -420,3 +420,29 @@ Value *blason_get(ObjectJson *json, char *key) {
         return NULL;
     return node->value;
 }
+
+void blason_put(ObjectJson *json, char *key, Value *val) {
+    if (json == NULL || key == NULL || val == NULL || json->htable == NULL)
+        return;
+    int len = strlen(key);
+    if (len == 0)
+        return;
+    unsigned long long hash = create_hash(key, len);
+    bst *node = fetch_bst(json->htable, hash);
+    if (node == NULL) {
+        insert_bst(json->htable, hash, val);
+        Token *tok = (Token *)malloc(sizeof(Token));
+        tok->length = len;
+        tok->type = STRING;
+        tok->value = key;
+
+        Member *member = (Member *)malloc(sizeof(Member));
+        member->key = *tok;
+        member->value = val;
+        member->next = json->members;
+        json->members = member;
+    } else {
+        node->value->type = val->type;
+        node->value->as = val->as;
+    }
+}

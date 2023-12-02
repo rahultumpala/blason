@@ -46,7 +46,8 @@ void __print_obj(Object *obj, int depth) {
 }
 
 void __print_value(Value *value, int depth) {
-    if(value == NULL) printf("CANNOT PRINT NULL VALUE\n");
+    if (value == NULL)
+        printf("CANNOT PRINT NULL VALUE\n");
     switch (value->type) {
     case VAL_BOOL:
         printf("%s", value->as.boolean ? "true" : "false");
@@ -105,21 +106,21 @@ void print_json(ObjectJson *json) {
 
 void print_json_min(ObjectJson *json) {
     __print_min = true;
-    __print_json(json, 0);
+    print_json(json);
     __print_min = false;
 }
 
 void print_value(Value *value) {
     __print_value(value, 0);
+    printf("\n");
 }
 
-void print_value_min(Value *value){
+void print_value_min(Value *value) {
     __print_min = true;
     print_value(value);
     __print_min = false;
-
 }
 
-void print_obj(Object *obj){
+void print_obj(Object *obj) {
     __print_obj(obj, 0);
 }

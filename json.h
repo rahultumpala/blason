@@ -110,9 +110,9 @@ void delete_bst(unsigned long long hash);
 
 bst *fetch_bst(bst *root, unsigned long long hash);
 
-void blason_put(ObjectJson *json);
-
 Value *blason_get(ObjectJson *json, char *key);
+
+void blason_put(ObjectJson *json, char *key, Value *val);
 
 #define DEBUG_ERRORS
 
