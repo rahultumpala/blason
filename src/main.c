@@ -1,7 +1,7 @@
 // a blazing fast json parser in C
 
-#include "json.h"
-#include "print.h"
+#include "libjson/json.h"
+#include "libjson/print.h"
 
 int main(int argc, const char *argv[]) {
     ObjectJson *json = parseJSON("./test.json");
