@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void __print_json(ObjectJson *json, int depth);
-void print_value(Value *value, int depth);
+void __print_value(Value *value, int depth);
 
 int width = 4;
 bool __print_min = false;
@@ -12,7 +12,7 @@ void print_json_token(Token token) {
     printf("%.*s", token.length, token.value);
 }
 
-void print_obj(Object *obj, int depth) {
+void __print_obj(Object *obj, int depth) {
     switch (obj->type) {
     case OBJ_STRING: {
         ObjectString *str = (ObjectString *)obj;
@@ -29,7 +29,7 @@ void print_obj(Object *obj, int depth) {
         printf("[");
         Value *t = array->start;
         while (t != NULL) {
-            print_value(t, depth);
+            __print_value(t, depth);
             if (t->next == NULL) {
                 break;
             }
@@ -45,7 +45,8 @@ void print_obj(Object *obj, int depth) {
     }
 }
 
-void print_value(Value *value, int depth) {
+void __print_value(Value *value, int depth) {
+    if(value == NULL) printf("CANNOT PRINT NULL VALUE\n");
     switch (value->type) {
     case VAL_BOOL:
         printf("%s", value->as.boolean ? "true" : "false");
@@ -62,7 +63,7 @@ void print_value(Value *value, int depth) {
         break;
     }
     case VAL_OBJ:
-        print_obj(value->as.obj, depth);
+        __print_obj(value->as.obj, depth);
         break;
     }
 }
@@ -72,7 +73,7 @@ void print_member(Member *member, int depth) {
         printf("%*c", depth * width, ' ');
     print_json_token(member->key);
     printf(" : ");
-    print_value(member->value, depth);
+    __print_value(member->value, depth);
     if (member->next) {
         if (!__print_min)
             printf(",\n");
@@ -87,6 +88,7 @@ void __print_json(ObjectJson *json, int depth) {
         printf("{\n");
     else
         printf("{");
+
     if (json->members != NULL)
         print_member(json->members, depth);
 
@@ -98,10 +100,26 @@ void __print_json(ObjectJson *json, int depth) {
 
 void print_json(ObjectJson *json) {
     __print_json(json, 0);
+    printf("\n");
 }
 
 void print_json_min(ObjectJson *json) {
     __print_min = true;
     __print_json(json, 0);
     __print_min = false;
+}
+
+void print_value(Value *value) {
+    __print_value(value, 0);
+}
+
+void print_value_min(Value *value){
+    __print_min = true;
+    print_value(value);
+    __print_min = false;
+
+}
+
+void print_obj(Object *obj){
+    __print_obj(obj, 0);
 }

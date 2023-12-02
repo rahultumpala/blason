@@ -1,18 +1,22 @@
 #ifndef blason_print
 #define blason_print
 
-
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "json.h"
 
-
 void print_json_token(Token token);
 
-void print_obj(Object *obj, int depth);
+void __print_obj(Object *obj, int depth);
 
-void print_value(Value *value, int depth);
+void print_obj(Object *obj);
+
+void __print_value(Value *value, int depth);
+
+void print_value(Value *value);
+
+void print_value_min(Value *value);
 
 void print_member(Member *member, int depth);
 

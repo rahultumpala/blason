@@ -307,6 +307,7 @@ static ObjectJson *object() {
 
     ObjectJson *json = (ObjectJson *)malloc(sizeof(ObjectJson));
     json->type = OBJ_JSON;
+    json->htable = NULL;
 
     expect(LBRACE, "Expect '{' at the beginning.");
     if (check(RBRACE))
@@ -314,7 +315,7 @@ static ObjectJson *object() {
     else
         json->members = members();
     expect(RBRACE, "Expect '}' after members.");
-
+    // create_bst(json);
     return json;
 }
 
@@ -322,7 +323,9 @@ ObjectJson *parseJSON(char *path) {
     lex(path);
     // to set the first token in parser.current
     advance();
-    return object();
+    ObjectJson *json = object();
+    create_bst(json);
+    return json;
 }
 
 unsigned long long create_hash(char *key, int length) {
@@ -333,6 +336,7 @@ unsigned long long create_hash(char *key, int length) {
         hash += p * (key[i] - 'a' + 1);
         p *= p;
     }
+    // printf("hash %lld\n", hash);
     return hash;
 }
 
@@ -347,6 +351,8 @@ static bst *__create_node() {
 
 void insert_bst(bst *root, unsigned long long hash, Value *val) {
     if (root->value == NULL) {
+        // printf("hash %lld", hash);
+        // print_value(val);
         root->hash = hash;
         root->value = val;
         return;
@@ -367,8 +373,19 @@ void create_bst(ObjectJson *json) {
         return;
     bst *ROOT = __create_node();
     Member *cur = json->members;
+    if (cur == NULL) {
+        json->htable = NULL;
+        return;
+    }
     while (cur != NULL) {
-        unsigned long long hash = create_hash(cur->key.value, cur->key.length);
+        // key contains double quote chars as well
+        // this is not desirable as double quote needs to be excluded when calculating hash
+        Token temp = cur->key;
+        temp.length -= 2;
+        if (temp.length > 0) {
+            temp.value++;
+        }
+        unsigned long long hash = create_hash(temp.value, temp.length);
         insert_bst(ROOT, hash, cur->value);
         if (cur->value->type == VAL_OBJ) {
             Object *obj = (Object *)cur->value->as.obj;
@@ -399,7 +416,7 @@ Value *blason_get(ObjectJson *json, char *key) {
     int len = strlen(key);
     unsigned long long hash = create_hash(key, len);
     bst *node = fetch_bst(json->htable, hash);
-    if (!node)
+    if (node == NULL)
         return NULL;
     return node->value;
 }
